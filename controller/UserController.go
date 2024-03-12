@@ -15,11 +15,11 @@ import (
 
 func Register(c *gin.Context) {
 	DB := common.GetDB()
-	name := c.PostForm("name")
-	phone := c.PostForm("phone")
+	username := c.PostForm("username")
+	mobile := c.PostForm("mobile")
 	password := c.PostForm("password")
 
-	if len(phone) != 11 {
+	if len(mobile) != 11 {
 		response.Response(c, 400, "400", nil, "手机号必须为11位")
 		return
 	}
@@ -29,13 +29,13 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	if len(name) == 0 {
-		name = util.RandomString(10)
+	if len(username) == 0 {
+		username = util.RandomString(10)
 	}
 
-	log.Println(name, phone, password)
+	log.Println(username, mobile, password)
 
-	if isPhoneExist(DB, phone) {
+	if isPhoneExist(DB, mobile) {
 		response.Response(c, 400, "400", nil, "用户已存在")
 		return
 	}
@@ -47,8 +47,8 @@ func Register(c *gin.Context) {
 	}
 
 	newUser := model.User{
-		Name:     name,
-		Phone:    phone,
+		UserName: username,
+		Mobile:   mobile,
 		Password: string(hasedPassword),
 	}
 
@@ -57,13 +57,24 @@ func Register(c *gin.Context) {
 	response.Success(c, nil, "注册成功")
 }
 
+type LoginParams struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 func Login(c *gin.Context) {
 	DB := common.GetDB()
 
-	phone := c.PostForm("phone")
-	password := c.PostForm("password")
+	var params LoginParams
+	if err := c.ShouldBindJSON(&params); err != nil {
+		response.Response(c, 400, "400", nil, "参数错误")
+		return
+	}
 
-	if len(phone) != 11 {
+	mobile := params.Username
+	password := params.Password
+
+	if len(mobile) != 11 {
 		response.Response(c, 400, "400", nil, "手机号必须为11位")
 		return
 	}
@@ -74,7 +85,7 @@ func Login(c *gin.Context) {
 	}
 
 	var user model.User
-	DB.Where("phone = ?", phone).First(&user)
+	DB.Where("mobile = ?", mobile).First(&user)
 	if user.ID == 0 {
 		response.Response(c, 400, "400", nil, "用户不存在")
 		return
@@ -101,8 +112,8 @@ func Info(c *gin.Context) {
 	response.Success(c, gin.H{"user": dto.TOUserDto(user.(model.User))}, "成功")
 }
 
-func isPhoneExist(db *gorm.DB, phone string) bool {
+func isPhoneExist(db *gorm.DB, mobile string) bool {
 	var user model.User
-	db.Where("phone = ?", phone).First(&user)
+	db.Where("mobile = ?", mobile).First(&user)
 	return user.ID != 0
 }
